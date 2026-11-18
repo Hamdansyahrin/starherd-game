@@ -115,14 +115,15 @@ function frame(now) {
   requestAnimationFrame(frame);
   let dt = (now - last) / 1000;
   last = now;
-  if (dt > 0.25) dt = 0.25;
+  if (dt > 1.0) dt = 1.0;
 
   for (const ev of input.drainEvents()) handleEvent(ev);
   handleClicks();
 
-  // Fixed-step simulation, at most 4 steps per frame.
+  // Fixed-step simulation; enough steps per frame to keep real-time pace
+  // even when a software renderer only manages a few frames per second.
   let steps = Math.max(1, Math.round(dt / STEP));
-  if (steps > 4) steps = 4;
+  if (steps > 60) steps = 60;
   for (let i = 0; i < steps; i++) world.update(STEP, input);
   playSounds();
   renderer.draw(world, input);

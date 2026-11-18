@@ -60,6 +60,42 @@ export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    this.bgNight = null;
+    this.bgNightNoMoon = null;
+    this.bgDawn = null;
+  }
+
+  // Static scenery is painted once into offscreen canvases and blitted
+  // each frame; only windows, entities and juice move. This keeps the
+  // frame cheap on software renderers while looking identical.
+  bakeBackgrounds() {
+    const fake = { time: 0, boss: null, glow: 100, screen: 'playing' };
+    this.bgNight = this.bake((ctx) => {
+      const keep = this.ctx;
+      this.ctx = ctx;
+      this.paintSky(fake, true);
+      this.ctx = keep;
+    });
+    this.bgNightNoMoon = this.bake((ctx) => {
+      const keep = this.ctx;
+      this.ctx = ctx;
+      this.paintSky({ ...fake, boss: { kind: 'moon' } }, true);
+      this.ctx = keep;
+    });
+    this.bgDawn = this.bake((ctx) => {
+      const keep = this.ctx;
+      this.ctx = ctx;
+      this.paintDawn(fake);
+      this.ctx = keep;
+    });
+  }
+
+  bake(paint) {
+    const c = document.createElement('canvas');
+    c.width = FIELD_W;
+    c.height = FIELD_H;
+    paint(c.getContext('2d'));
+    return c;
   }
 
   draw(world, input) {
@@ -108,6 +144,35 @@ export class Renderer {
   }
 
   drawBackground(world) {
+    if (!this.bgNight) this.bakeBackgrounds();
+    const ctx = this.ctx;
+    const noMoon = world.boss && world.boss.kind === 'moon';
+    ctx.drawImage(noMoon ? this.bgNightNoMoon : this.bgNight, 0, 0);
+    // Candle windows still twinkle over the baked village.
+    for (const win of WINDOWS) {
+      const on = Math.sin(world.time * win.speed + win.phase) > -0.25;
+      ctx.fillStyle = on ? 'rgba(255,190,90,0.95)' : 'rgba(255,190,90,0.18)';
+      ctx.fillRect(win.x, win.y, 5, 7);
+    }
+    // One live aurora ribbon drifts over the baked sky.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    const baseY = 118;
+    ctx.moveTo(0, baseY);
+    for (let x = 0; x <= FIELD_W; x += 64) {
+      ctx.lineTo(x, baseY + Math.sin(x * 0.006 + world.time * 0.35) * 30);
+    }
+    for (let x = FIELD_W; x >= 0; x -= 64) {
+      ctx.lineTo(x, baseY + 52 + Math.sin(x * 0.006 + world.time * 0.35 + 1) * 30);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(55,242,200,0.07)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  paintSky(world) {
     const ctx = this.ctx;
     const t = world.time;
     const g = ctx.createLinearGradient(0, 0, 0, FIELD_H);
@@ -199,6 +264,11 @@ export class Renderer {
   }
 
   drawDawn(world) {
+    if (!this.bgDawn) this.bakeBackgrounds();
+    this.ctx.drawImage(this.bgDawn, 0, 0);
+  }
+
+  paintDawn(world) {
     const ctx = this.ctx;
     const g = ctx.createLinearGradient(0, 0, 0, FIELD_H);
     g.addColorStop(0, '#3a2a6e');
@@ -252,8 +322,6 @@ export class Renderer {
       if (pass === 0) {
         ctx.strokeStyle = 'rgba(255,170,60,0.35)';
         ctx.lineWidth = width + 9;
-        ctx.shadowColor = 'rgba(255,190,80,0.9)';
-        ctx.shadowBlur = 18;
       } else {
         const grad = ctx.createLinearGradient(tr[0].x, tr[0].y, world.wisp.x, world.wisp.y);
         grad.addColorStop(0, 'rgba(255,190,80,0.55)');
@@ -272,8 +340,9 @@ export class Renderer {
     for (const s of world.strays) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.shadowColor = 'rgba(255,215,106,0.95)';
-      ctx.shadowBlur = 14;
+      ctx.fillStyle = 'rgba(255,215,106,0.25)';
+      starPath(ctx, s.x, s.y, 15 * (s.scale || 1), world.time * 1.5 + s.phase);
+      ctx.fill();
       ctx.fillStyle = s.haloTime > 0.1 ? '#ffffff' : PALETTE.gold;
       starPath(ctx, s.x, s.y, 9 * (s.scale || 1), world.time * 1.5 + s.phase);
       ctx.fill();
@@ -420,8 +489,9 @@ export class Renderer {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < pts.length; i++) {
-      ctx.shadowColor = 'rgba(255,215,106,0.9)';
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = 'rgba(255,215,106,0.28)';
+      starPath(ctx, pts[i].x, pts[i].y, 11, world.time * 2 + i);
+      ctx.fill();
       ctx.fillStyle = i % 3 === 0 ? '#fff3d6' : PALETTE.gold;
       starPath(ctx, pts[i].x, pts[i].y, 6.5, world.time * 2 + i);
       ctx.fill();

@@ -442,6 +442,22 @@ export class World {
     const tr = this.trail;
     const n = tr.length;
     if (n < WISP.minLoopSamplesBack + 4) return;
+    const head = tr[n - 1];
+    // Proximity closure first: the head coming back within a ribbon's
+    // width of an older trail point closes the loop. This keeps closure
+    // reliable for step-wise movement (autopilots, low frame rates),
+    // where the head stops at vertices instead of overshooting them.
+    for (let i = 0; i < n - WISP.minLoopSamplesBack; i++) {
+      if (dist2(head.x, head.y, tr[i].x, tr[i].y) < 15 * 15) {
+        const poly = tr.slice(i);
+        const area = polygonArea(poly);
+        if (area >= WISP.minLoopArea) {
+          this.closeLoop(poly, area);
+          this.trail = [this.wispPos()];
+        }
+        return;
+      }
+    }
     const a = tr[n - 2], b = tr[n - 1];
     for (let i = 0; i < n - WISP.minLoopSamplesBack - 1; i++) {
       const c = tr[i], d = tr[i + 1];
