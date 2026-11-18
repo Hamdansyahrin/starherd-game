@@ -120,11 +120,20 @@ function frame(now) {
   for (const ev of input.drainEvents()) handleEvent(ev);
   handleClicks();
 
-  // Fixed-step simulation; enough steps per frame to keep real-time pace
-  // even when a software renderer only manages a few frames per second.
-  let steps = Math.max(1, Math.round(dt / STEP));
-  if (steps > 60) steps = 60;
-  for (let i = 0; i < steps; i++) world.update(STEP, input);
+  if (shot) {
+    // Staged scene: pin the Wisp in place and advance the world a few
+    // fixed steps only, so the staged composition survives to the
+    // screenshot unchanged at any frame rate.
+    input.targetX = world.wisp.x;
+    input.targetY = world.wisp.y;
+    if (shotFrames < 12) world.update(STEP, input);
+  } else {
+    // Fixed-step simulation; enough steps per frame to keep real-time pace
+    // even when a software renderer only manages a few frames per second.
+    let steps = Math.max(1, Math.round(dt / STEP));
+    if (steps > 60) steps = 60;
+    for (let i = 0; i < steps; i++) world.update(STEP, input);
+  }
   playSounds();
   renderer.draw(world, input);
 

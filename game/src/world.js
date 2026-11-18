@@ -309,7 +309,7 @@ export class World {
       vx: (fromLeft ? 1 : -1) * speed, vy: this.rng.range(-24, 24),
       phase: this.rng.range(0, 6), baseY: y,
     });
-    this.popups.push({ x: fromLeft ? 90 : FIELD_W - 90, y: 96, text: 'COMET!', t: 0, life: 1.1, big: false, color: '#7df9ff' });
+    this.popups.push({ x: fromLeft ? 210 : FIELD_W - 210, y: 118, text: 'COMET!', t: 0, life: 1.1, big: false, color: '#7df9ff' });
   }
 
   spawnUmbra(x, y) {

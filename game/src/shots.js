@@ -67,7 +67,7 @@ export function stageShot(world, mode) {
     world.spawnStrayCluster(980, 470, 3);
     world.spawnComet();
     const comet = world.comets[world.comets.length - 1];
-    if (comet) { comet.x = 830; comet.y = 210; comet.baseY = 210; comet.vx = 300; }
+    if (comet) { comet.x = 760; comet.y = 210; comet.baseY = 210; comet.vx = 300; }
     return;
   }
   if (mode === 'action') {
